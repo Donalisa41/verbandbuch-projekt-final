@@ -1,35 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { accidentService } from '../services/api';
+import React, { useState } from 'react';
+import { useAccidents, useDeleteAccident } from '../hooks/accidents.query';
 
 const AdminDashboard = () => {
-  const [accidents, setAccidents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [searchName, setSearchName] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState('unfall_datum');
   const [sortDirection, setSortDirection] = useState('desc');
 
-  const loadAccidents = (page = 1, search = '') => {
-    setLoading(true);
-    setError('');
+  // React Query statt useState/useEffect
+  const { data, isLoading, isError, error } = useAccidents(currentPage, searchName);
+  const deleteAccidentMutation = useDeleteAccident();
 
-    accidentService.getAll(page, 10, search)
-      .then(response => {
-        setAccidents(response.data.data);
-        setCurrentPage(response.data.pagination.currentPage);
-      })
-      .catch(err => {
-        setError(err.message || 'Fehler beim Laden der Unfälle');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
-
-  useEffect(() => {
-    loadAccidents(currentPage, searchName);
-  }, [currentPage, searchName]);
+  const accidents = data?.accidents || [];
+  const loading = isLoading;
 
   const handleSearchChange = (e) => {
     setSearchName(e.target.value);
@@ -44,18 +27,15 @@ const AdminDashboard = () => {
     return timeString ? timeString.slice(0, 5) : '';
   };
 
-  const handleDelete = (id, name) => {
+  const handleDelete = async (id, name) => {
     if (!window.confirm(`Unfall von ${name} wirklich löschen?`)) {
       return;
     }
-
-    accidentService.delete(id)
-      .then(() => {
-        loadAccidents(currentPage, searchName);
-      })
-      .catch(err => {
-        setError(err.message || 'Fehler beim Löschen');
-      });
+    try {
+      await deleteAccidentMutation.mutateAsync(id);
+    } catch (err) {
+      // Wird durch die Mutation gehandelt
+    }
   };
 
   const handleSort = (field) => {
@@ -91,7 +71,6 @@ const AdminDashboard = () => {
   return (
     <div className="dashboard-container">
       <div className="card">
-        {/* Header mittig */}
         <div className="card__header card__header--center">
           <h1 className="card__title card__title--center">Verbandbuch-Einträge</h1>
           <p className="card__description">Übersicht aller gemeldeten Unfälle</p>
@@ -110,9 +89,9 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {error && (
+        {isError && (
           <div className="alert alert--error">
-            {error}
+            {error.message}
           </div>
         )}
 
@@ -127,7 +106,6 @@ const AdminDashboard = () => {
           </div>
         ) : (
           <>
-            {/* Scrollbarer Tabellen-Wrapper */}
             <div className="admin-table-scroll">
               <table className="admin-table">
                 <thead>
@@ -182,8 +160,11 @@ const AdminDashboard = () => {
                             fontSize: '0.7rem',
                             padding: '0.2rem 0.4rem'
                           }}
+                          disabled={deleteAccidentMutation.isLoading}
                         >
-                          Löschen
+                          {deleteAccidentMutation.isLoading && 
+                           deleteAccidentMutation.variables === accident.id ? 
+                            'Löscht...' : 'Löschen'}
                         </button>
                       </td>
                     </tr>

@@ -1,16 +1,15 @@
 import { useState } from "react";
-import { accidentService } from "../services/api";
+import { useCreateAccident } from '../hooks/accidents.query';
 
-// Helpers für deutsche Datums-/Zeitvalidierung
-const DATE_RE = /^(\d{2})\.(\d{2})\.(\d{4})$/; // tt.mm.jjjj
-const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/; // hh:mm
+// Helpers für deutsche Datums-/Zeitvalidierung (bleiben gleich)
+const DATE_RE = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 function parseDateDE(str) {
   const m = DATE_RE.exec(str);
   if (!m) return null;
   const [, dd, mm, yyyy] = m;
   const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-  // Plausibilitätscheck (z. B. 31.02.x)
   if (
     d.getFullYear() !== Number(yyyy) ||
     d.getMonth() !== Number(mm) - 1 ||
@@ -37,15 +36,15 @@ const AccidentForm = () => {
     ersthelfer_name: "",
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
   const [errors, setErrors] = useState({});
+
+  // React Query Mutation statt isSubmitting/message
+  const createAccidentMutation = useCreateAccident();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
-    if (message) setMessage("");
   };
 
   const validateForm = () => {
@@ -64,14 +63,12 @@ const AccidentForm = () => {
       "ersthelfer_name",
     ];
 
-    // Pflichtfelder
     requiredFields.forEach((field) => {
       if (!formData[field] || formData[field].trim() === "") {
         newErrors[field] = "Dieses Feld ist erforderlich";
       }
     });
 
-    // Datum/Zeit prüfen (deutsches Format)
     const dUnfall = parseDateDE(formData.unfall_datum);
     if (formData.unfall_datum && !dUnfall) {
       newErrors.unfall_datum = "Bitte im Format tt.mm.jjjj eingeben";
@@ -92,7 +89,6 @@ const AccidentForm = () => {
         "Bitte im Format hh:mm (00–23:59) eingeben";
     }
 
-    // Unfall-Datum nicht in der Zukunft
     if (dUnfall) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -106,7 +102,6 @@ const AccidentForm = () => {
       }
     }
 
-    // Erste Hilfe nicht vor Unfall
     if (dUnfall && dEH) {
       const u = new Date(
         dUnfall.getFullYear(),
@@ -126,23 +121,13 @@ const AccidentForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      setMessage("Bitte alle Felder korrekt ausfüllen");
       return;
     }
-    setIsSubmitting(true);
-    setMessage("");
-    try {
-      // Optional: Wenn der Server ISO erwartet, hier konvertieren:
-      // const dUnfall = parseDateDE(formData.unfall_datum);
-      // const dEH = parseDateDE(formData.erstehilfe_datum);
-      // const payload = { ...formData,
-      //   unfall_datum: dUnfall ? dUnfall.toISOString().slice(0,10) : formData.unfall_datum,
-      //   erstehilfe_datum: dEH ? dEH.toISOString().slice(0,10) : formData.erstehilfe_datum,
-      // };
 
-      const response = await accidentService.create(formData);
-      if (response.data.success) {
-        setMessage(`Unfall erfolgreich gemeldet! ID: ${response.data.data.id}`);
+    try {
+      const result = await createAccidentMutation.mutateAsync(formData);
+      
+      if (result.success) {
         setFormData({
           name_verletzte_person: "",
           unfall_datum: "",
@@ -159,11 +144,18 @@ const AccidentForm = () => {
         setErrors({});
       }
     } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setIsSubmitting(false);
+      console.error('Submit error:', error.message);
     }
   };
+
+  // Messages von React Query
+  const successMessage = createAccidentMutation.isSuccess && createAccidentMutation.data?.success ? 
+    `Unfall erfolgreich gemeldet! ID: ${createAccidentMutation.data.data.id}` : null;
+  
+  const errorMessage = createAccidentMutation.isError ? 
+    createAccidentMutation.error.message : null;
+
+  const isSubmitting = createAccidentMutation.isLoading;
 
   return (
     <div className="report-page">
@@ -175,20 +167,25 @@ const AccidentForm = () => {
             </p>
           </div>
 
-          {message && (
-            <div
-              className={`alert ${
-                message.includes("erfolgreich")
-                  ? "alert--success"
-                  : "alert--error"
-              }`}
-            >
-              {message}
+          {successMessage && (
+            <div className="alert alert--success">
+              {successMessage}
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="alert alert--error">
+              {errorMessage}
+            </div>
+          )}
+
+          {Object.keys(errors).length > 0 && (
+            <div className="alert alert--error">
+              Bitte alle Felder korrekt ausfüllen
             </div>
           )}
 
           <form onSubmit={handleSubmit}>
-            {/* --- Karte: Verletzte Person --- */}
             <div className="card">
               <h2>Verletzte Person</h2>
               <div className="form-grid">
@@ -209,6 +206,7 @@ const AccidentForm = () => {
                       errors.name_verletzte_person ? "form-input--error" : ""
                     }`}
                     placeholder="Vor- und Nachname"
+                    disabled={isSubmitting}
                   />
                   {errors.name_verletzte_person && (
                     <div className="form-error">
@@ -219,7 +217,6 @@ const AccidentForm = () => {
               </div>
             </div>
 
-            {/* --- Karte: Unfall-Details --- */}
             <div className="card">
               <h2>Unfall-Details</h2>
               <div className="form-grid">
@@ -241,6 +238,7 @@ const AccidentForm = () => {
                     className={`form-input ${
                       errors.unfall_datum ? "form-input--error" : ""
                     }`}
+                    disabled={isSubmitting}
                   />
                   {errors.unfall_datum && (
                     <div className="form-error">{errors.unfall_datum}</div>
@@ -265,6 +263,7 @@ const AccidentForm = () => {
                     className={`form-input ${
                       errors.unfall_uhrzeit ? "form-input--error" : ""
                     }`}
+                    disabled={isSubmitting}
                   />
                   {errors.unfall_uhrzeit && (
                     <div className="form-error">{errors.unfall_uhrzeit}</div>
@@ -288,6 +287,7 @@ const AccidentForm = () => {
                       errors.ort ? "form-input--error" : ""
                     }`}
                     placeholder="z.B. Büro 204, Gebäude A"
+                    disabled={isSubmitting}
                   />
                   {errors.ort && <div className="form-error">{errors.ort}</div>}
                 </div>
@@ -309,6 +309,7 @@ const AccidentForm = () => {
                     }`}
                     placeholder="Beschreiben Sie, wie der Unfall passiert ist..."
                     rows="4"
+                    disabled={isSubmitting}
                   />
                   {errors.hergang && (
                     <div className="form-error">{errors.hergang}</div>
@@ -332,6 +333,7 @@ const AccidentForm = () => {
                     }`}
                     placeholder="z.B. Prellung am rechten Knie..."
                     rows="3"
+                    disabled={isSubmitting}
                   />
                   {errors.art_der_verletzung && (
                     <div className="form-error">
@@ -357,6 +359,7 @@ const AccidentForm = () => {
                       errors.zeugen ? "form-input--error" : ""
                     }`}
                     placeholder='Namen der Zeugen oder "keine Zeugen"'
+                    disabled={isSubmitting}
                   />
                   {errors.zeugen && (
                     <div className="form-error">{errors.zeugen}</div>
@@ -365,7 +368,6 @@ const AccidentForm = () => {
               </div>
             </div>
 
-            {/* --- Karte: Erste Hilfe --- */}
             <div className="card">
               <h2>Erste-Hilfe-Leistungen</h2>
               <div className="form-grid">
@@ -387,6 +389,7 @@ const AccidentForm = () => {
                     className={`form-input ${
                       errors.erstehilfe_datum ? "form-input--error" : ""
                     }`}
+                    disabled={isSubmitting}
                   />
                   {errors.erstehilfe_datum && (
                     <div className="form-error">{errors.erstehilfe_datum}</div>
@@ -411,6 +414,7 @@ const AccidentForm = () => {
                     className={`form-input ${
                       errors.erstehilfe_uhrzeit ? "form-input--error" : ""
                     }`}
+                    disabled={isSubmitting}
                   />
                   {errors.erstehilfe_uhrzeit && (
                     <div className="form-error">
@@ -436,6 +440,7 @@ const AccidentForm = () => {
                     }`}
                     placeholder="z.B. Wunde gereinigt, Verband angelegt..."
                     rows="3"
+                    disabled={isSubmitting}
                   />
                   {errors.erstehilfe_massnahmen && (
                     <div className="form-error">
@@ -460,6 +465,7 @@ const AccidentForm = () => {
                     className={`form-input ${
                       errors.ersthelfer_name ? "form-input--error" : ""
                     }`}
+                    disabled={isSubmitting}
                   />
                   {errors.ersthelfer_name && (
                     <div className="form-error">{errors.ersthelfer_name}</div>

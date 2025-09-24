@@ -76,8 +76,8 @@ pool.on('error', (err, client) => {
 const query = (text, params = []) => {
     // Optional: SQL-Queries loggen (nur Development)
     if (process.env.LOG_SQL_QUERIES === 'true' && process.env.NODE_ENV === 'development') {
-        console.log('🔍 SQL-Query:', text);
-        console.log('📋 Parameter:', params);
+        console.log(' SQL-Query:', text);
+        console.log('Parameter:', params);
     }
     
     // Promise-Chain für Query-Ausführung
@@ -91,7 +91,7 @@ const query = (text, params = []) => {
         })
         .catch(error => {
             // Detailliertes Error-Logging
-            console.error('❌ SQL-Query-Fehler:', {
+            console.error('SQL-Query-Fehler:', {
                 query: text,
                 params: params,
                 error: error.message,
@@ -130,7 +130,7 @@ const testConnection = () => {
         })
         .catch(error => {
             console.error('\n' + '='.repeat(50));
-            console.error('❌ POSTGRESQL-VERBINDUNG FEHLGESCHLAGEN');
+            console.error(' POSTGRESQL-VERBINDUNG FEHLGESCHLAGEN');
             console.error('='.repeat(50));
             console.error('Fehler:', error.message);
             console.error('Host:', process.env.PG_HOST);
