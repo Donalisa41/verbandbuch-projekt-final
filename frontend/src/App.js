@@ -10,21 +10,22 @@ import "./styles/global.css";
 /** Einheitlicher Header (Logo + Titel + Untertitel) */
 function PageHeader({ title, subtitle }) {
   return (
-    <header className="app-header">
-      <div className="app-header__content">
-        <a className="app-header__brand" href="/">
-          <img
-            src="/ga-ffm_logo.svg"     // liegt in public/
-            alt="Gesundheitsamt Frankfurt am Main"
-            className="app-header__brand-logo"
-          />
-          <div className="app-header__titles">
-            <h1 className="app-header__title">{title}</h1>
-            {subtitle && <p className="app-header__subtitle">{subtitle}</p>}
+    <>
+      <header className="app-header">
+        <div className="container">
+          <div className="app-header__content">
+            <img src="/ga-ffm_logo.svg" alt="Gesundheitsamt Frankfurt am Main" className="app-header__brand-logo" />
           </div>
-        </a>
+        </div>
+      </header>
+      
+      <div className="page-title-section">
+        <div className="container">
+          <h1>{title}</h1>
+          {subtitle && <p>{subtitle}</p>}
+        </div>
       </div>
-    </header>
+    </>
   );
 }
 

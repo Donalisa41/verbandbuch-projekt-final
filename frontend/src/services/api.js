@@ -11,16 +11,14 @@ const apiClient = axios.create({
 });
 
 export const accidentService = {
-  getAll: (page = 1, limit = 10, searchName = '') => {
+  getAll: (page = 1, limit = 1000, searchName = '') => {
     const params = { page, limit };
     if (searchName.trim()) {
       params.search_name = searchName.trim();
     }
     
     return apiClient.get('/api/accidents', { params })
-      .then(response => {
-        return response;
-      })
+      .then(res => res.data)   // <<< nur Daten zurückgeben
       .catch(error => {
         const errorMessage = error.response?.data?.error || 'Fehler beim Laden der Unfälle';
         throw new Error(errorMessage);
@@ -29,9 +27,7 @@ export const accidentService = {
   
   create: (accidentData) => {
     return apiClient.post('/api/accidents', accidentData)
-      .then(response => {
-        return response;
-      })
+      .then(res => res.data)   // <<< nur Daten zurückgeben
       .catch(error => {
         const errorMessage = error.response?.data?.error || 'Fehler beim Speichern';
         throw new Error(errorMessage);
@@ -40,9 +36,7 @@ export const accidentService = {
   
   delete: (id) => {
     return apiClient.delete(`/api/accidents/${id}`)
-      .then(response => {
-        return response;
-      })
+      .then(res => res.data)   // <<< nur Daten zurückgeben
       .catch(error => {
         const errorMessage = error.response?.data?.error || 'Fehler beim Löschen';
         throw new Error(errorMessage);

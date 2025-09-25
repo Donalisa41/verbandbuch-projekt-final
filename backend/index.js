@@ -11,7 +11,7 @@ import accidentsRoutes from './routes/accidents.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 console.log('Verbandbuch-Server startet...');
 
@@ -21,7 +21,7 @@ console.log('Verbandbuch-Server startet...');
 
 // CORS: Frontend-Backend-Kommunikation ermöglichen
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE']
 }));

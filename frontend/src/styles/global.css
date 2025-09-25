@@ -36,9 +36,9 @@
 
 /* ========== 2) Variablen ========== */
 :root {
-  --brand-turquoise: #009da7; /* Headlines / Icons / Link-Hover */
-  --brand-blue: #33b8e8; /* Verlauf / Sekundär */
-  --text-color: #414141;      /* Fließtext */
+  --brand-turquoise: #009da7;
+  --brand-blue: #33b8e8;
+  --text-color: #414141;
   --white: #ffffff;
   --bg-body: #f4f7fb;
   --border: #e5e7eb;
@@ -48,16 +48,17 @@
 }
 
 /* ========== 3) Base ========== */
-* { 
-  box-sizing: border-box; 
+* {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
-html, body { 
-  height: 100%; 
+html,
+body {
+  height: 100%;
 }
 body {
-  font-family: "FS Me", -apple-system, BlinkMacSystemFont, Arial, sans-serif; /* Fließtext-Familie */
+  font-family: "FS Me", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   font-weight: 400;
   color: var(--text-color);
   background: var(--bg-body);
@@ -67,10 +68,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 12px;
+  padding: 0 16px;
 }
 
 main {
@@ -81,132 +83,87 @@ main {
 /* ========== 4) Typografie ========== */
 h1, h2, h3 {
   font-family: "Aglet Sans", "FS Me", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
-  font-weight: 600; /* Semibold */
-  color: var(--brand-turquoise); /* CD: Headlines türkis */
+  font-weight: 600;
+  color: var(--brand-turquoise);
   line-height: 1.25;
   margin: 0 0 1rem;
 }
-h1 { font-size: 1.875rem; } /* ~30px */
-h2 { font-size: 1.5rem;   } /* ~24px */
-h3 { font-size: 1.25rem;  } /* ~20px */
-
-.subtitle, .intro, .muted-text {
-  font-family: "Aglet Sans", "FS Me", Arial, sans-serif;
-  font-weight: 300; /* Light */
-  color: var(--text-color);
-}
+h1 { font-size: 1.875rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
 
 p, li, label, input, textarea, select, button, small {
   font-family: "FS Me", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   font-weight: 400;
   color: var(--text-color);
 }
-strong, b, .text-strong { font-weight: 700; } /* FS Me Bold */
+strong, b { font-weight: 700; }
 
-@media (max-width: 480px) {
-  h1 { font-size: 1.5rem; }
-  h2 { font-size: 1.25rem; }
-  h3 { font-size: 1.125rem; }
+a {
+  color: var(--brand-turquoise);
+  text-decoration: none;
 }
-
-/* ========== 5) Links & Icons ========== */
-a { 
-  color: var(--brand-turquoise); 
-  text-decoration: none; 
-}
-a:hover { 
-  text-decoration: underline; 
-}
-.icon, [class*="icon-"] { 
-  color: var(--brand-turquoise); 
+a:hover {
+  text-decoration: underline;
 }
 
-/* ========================================================================== */
-/* 6) Header - GA-Lotse Style (Logo links, Titel daneben)                    */
-/* ========================================================================== */
+/* ========== 5) Header - Nur Logo ========== */
 .app-header {
   background: linear-gradient(90deg, #009da7 0%, #33b8e8 100%);
   color: var(--white);
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-.app-header .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-/* DESKTOP: Logo links, Titel rechts daneben (wie GA-Lotse) */
 .app-header__content {
-  display: grid;
-  grid-template-columns: auto 1fr auto; /* Logo | Titel | Platz */
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 16px;
   min-height: 80px;
-  padding: 12px 0;
+  padding: 1rem 0;
 }
 
-.app-logo,
 .app-header__brand-logo {
   height: 50px;
   width: auto;
-  grid-column: 1; /* Erste Spalte */
 }
 
-.app-header__titles {
-  grid-column: 2; /* Zweite Spalte - neben dem Logo */
-  justify-self: start; /* Links ausgerichtet, nicht zentriert */
-}
-
-.app-header__title {
-  font-family: "Aglet Sans", "FS Me", Arial, sans-serif;
-  font-weight: 600;
-  color: var(--white);
-  margin: 0;
-  font-size: 1.8rem;
-  line-height: 1.1;
-}
-
-.app-header__subtitle {
-  font-family: "Aglet Sans", "FS Me", Arial, sans-serif;
-  font-weight: 300;
-  color: rgba(255, 255, 255, 0.8);
-  margin: 2px 0 0 0;
-  font-size: 1rem;
-}
-
-/* MOBILE: Logo über Titel (zentriert) */
-@media (max-width: 768px) {
-  .app-header__content {
-    display: flex;
-    flex-direction: column;
-    text-align: center;
-    gap: 8px;
-    min-height: 100px;
-  }
-  
-  .app-logo,
+@media (max-width: 640px) {
   .app-header__brand-logo {
-    height: 45px;
-  }
-  
-  .app-header__titles {
-    justify-self: center;
-  }
-  
-  .app-header__title {
-    font-size: 1.5rem;
-  }
-  
-  .app-header__subtitle {
-    font-size: 0.9rem;
+    height: 40px;
   }
 }
 
-/* ========== 7) Cards / Boxen ========== */
+/* ========== 6) Page Title Section ========== */
+.page-title-section {
+  text-align: center;
+  padding: 2rem 0;
+  background: var(--bg-body);
+}
+
+.page-title-section h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--brand-turquoise);
+}
+
+.page-title-section p {
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+@media (max-width: 640px) {
+  .page-title-section h1 {
+    font-size: 2rem;
+  }
+  .page-title-section p {
+    font-size: 1rem;
+  }
+}
+
+/* ========== 7) Cards ========== */
 .card {
   background: var(--white);
   border: 1px solid var(--border);
@@ -225,10 +182,9 @@ a:hover {
   font-size: 1.25rem;
   margin: 0 0 0.5rem;
 }
-.card__description { 
-  color: var(--muted); 
+.card__description {
+  color: var(--muted);
 }
-
 .card__header {
   border-bottom: 1px solid var(--border);
   padding-bottom: 1rem;
@@ -241,7 +197,6 @@ a:hover {
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
-
 .col-span-2 {
   grid-column: span 2;
 }
@@ -255,11 +210,11 @@ a:hover {
   }
 }
 
-.form-group { 
-  margin-bottom: 1.1rem; 
+.form-group {
+  margin-bottom: 1.1rem;
 }
 .form-label {
-  font-weight: 700; /* FS Me Bold für Lesbarkeit */
+  font-weight: 700;
   margin-bottom: 0.5rem;
   display: block;
   font-size: 0.9rem;
@@ -268,6 +223,7 @@ a:hover {
   content: " *";
   color: var(--error-color);
 }
+
 .form-input, .form-textarea, select {
   width: 100%;
   padding: 0.75rem 0.9rem;
@@ -275,20 +231,18 @@ a:hover {
   border-radius: 10px;
   background: var(--white);
   font-size: 1rem;
-  word-wrap: break-word;
-  white-space: pre-wrap;
 }
-.form-textarea { 
-  min-height: 110px; 
-  resize: vertical; 
+.form-textarea {
+  min-height: 110px;
+  resize: vertical;
 }
+
 .form-input:focus, .form-textarea:focus, select:focus {
   outline: none;
   border-color: var(--brand-turquoise);
   box-shadow: 0 0 0 3px rgba(0, 157, 167, 0.12);
 }
-.form-input--error,
-.form-textarea--error {
+.form-input--error, .form-textarea--error {
   border-color: var(--error-color);
 }
 .form-error {
@@ -297,10 +251,8 @@ a:hover {
   margin-top: 0.25rem;
 }
 
-/* Mobile Input-Optimierung */
 @media (max-width: 640px) {
-  .form-input,
-  .form-textarea {
+  .form-input, .form-textarea {
     font-size: 16px;
     padding: 0.875rem;
   }
@@ -319,12 +271,12 @@ a:hover {
   text-decoration: none;
   transition: 0.15s ease;
 }
-.btn--primary { 
-  background: var(--brand-turquoise); 
-  color: var(--white); 
+.btn--primary {
+  background: var(--brand-turquoise);
+  color: var(--white);
 }
-.btn--primary:hover { 
-  filter: brightness(0.95); 
+.btn--primary:hover {
+  filter: brightness(0.95);
 }
 .btn--secondary {
   background: var(--white);
@@ -339,25 +291,21 @@ a:hover {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
 }
-
 .btn--large {
   padding: 1rem 2rem;
   font-size: 1.125rem;
 }
-
 .btn--full {
   width: 100%;
 }
 
-/* Mobile Button-Anpassung - deutlich kleiner */
 @media (max-width: 640px) {
   .btn--large {
-    padding: 0.6rem 1.2rem; /* Viel kleiner auf mobile */
+    padding: 0.6rem 1.2rem;
     font-size: 0.95rem;
   }
-  
   .btn--full {
-    max-width: 250px; /* Nicht die ganze Breite */
+    max-width: 250px;
     margin: 0 auto;
   }
 }
@@ -388,53 +336,38 @@ a:hover {
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
-
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* ========================================================================== */
-/* 12) Footer - GA-Lotse Style (Impressum/Datenschutz rechts)                */
-/* ========================================================================== */
+/* ========== 12) Footer ========== */
 .site-footer {
   background: #f8f9fa;
   border-top: 1px solid var(--border);
   padding: 16px 0;
-  position: relative;
-  z-index: 5;
 }
-
 .footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 16px;
+  width: 100%;
+  padding: 0 20px;
   display: flex;
-  justify-content: flex-end; /* Rechtsbündig wie GA-Lotse */
+  justify-content: flex-end;
   align-items: center;
 }
-
 .footer-links {
   display: flex;
-  gap: 24px; /* Abstand zwischen Links */
+  gap: 24px;
 }
-
 .footer-links a {
   color: var(--brand-turquoise);
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
 }
-
 .footer-links a:hover {
   text-decoration: underline;
 }
 
-/* Footer bleibt auch auf mobile rechts */
 @media (max-width: 640px) {
-  .footer-content {
-    justify-content: flex-end;
-  }
-  
   .footer-links {
     gap: 16px;
   }
@@ -444,73 +377,20 @@ a:hover {
 .flex { display: flex; }
 .items-center { align-items: center; }
 .justify-center { justify-content: center; }
-.justify-between { justify-content: space-between; }
 .text-center { text-align: center; }
 
-/* ========== 14) Admin-Tabelle Basics ========== */
-.admin-table-wrapper {
+/* ========== 14) Admin-Tabelle ========== */
+.admin-table-scroll {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 .admin-table {
   min-width: 720px;
   table-layout: fixed;
 }
-.admin-table th,
-.admin-table td {
+.admin-table th, .admin-table td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.accident-item {
-  border-left: 4px solid var(--brand-turquoise);
-}
-
-.accident-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.accident-name {
-  margin: 0;
-  font-size: 1.125rem;
-}
-
-.accident-date {
-  font-size: 0.875rem;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.detail-row {
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.detail-row strong {
-  color: var(--text-color);
-  margin-right: 0.5rem;
-  min-width: 100px;
-  display: inline-block;
-}
-
-.accident-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
-}
-
-.accident-id {
-  font-size: 0.75rem;
-  color: var(--muted);
-  font-family: monospace;
 }
 
 .pagination {
@@ -522,27 +402,16 @@ a:hover {
   padding: 1rem;
 }
 
-.pagination-info {
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-/* ========== 15) Impressum-Text Styling ========== */
+/* ========== 15) Impressum ========== */
 .impressum-text p {
   margin-bottom: 1rem;
   line-height: 1.6;
 }
-
 .impressum-text strong {
   font-weight: 700;
   color: var(--text-color);
 }
-
 .impressum-text a {
   color: var(--brand-turquoise);
   text-decoration: underline;
-}
-
-.impressum-text a:hover {
-  text-decoration: none;
 }

@@ -4,20 +4,16 @@ import { accidentService } from '../services/api';
 export const accidentKeys = {
   all: ['accidents'],
   lists: () => [...accidentKeys.all, 'list'],
-  list: (page, searchName) => [...accidentKeys.lists(), { page, searchName }]
+  list: (searchName) => [...accidentKeys.lists(), { searchName }]
 };
 
-export const useAccidents = (page = 1, searchName = '') => {
+export const useAccidents = (searchName = '') => {
   return useQuery({
-    queryKey: accidentKeys.list(page, searchName),
+    queryKey: accidentKeys.list(searchName),
     queryFn: async () => {
-      const response = await accidentService.getAll(page, 10, searchName);
-      return {
-        accidents: response.data.data,
-        pagination: response.data.pagination
-      };
+      const response = await accidentService.getAll(1, 1000, searchName);
+      return response.data.data;
     },
-    keepPreviousData: true,
     staleTime: 60 * 1000,
   });
 };

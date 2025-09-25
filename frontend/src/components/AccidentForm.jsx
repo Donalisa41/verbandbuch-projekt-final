@@ -1,12 +1,29 @@
 import { useState } from "react";
-import { useCreateAccident } from '../hooks/accidents.query';
+import { useCreateAccident } from "../hooks/accidents.query";
 
-// Helpers für deutsche Datums-/Zeitvalidierung (bleiben gleich)
-const DATE_RE = /^(\d{2})\.(\d{2})\.(\d{4})$/;
-const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+// =========================
+// Helfer für Datums-/Zeit-Masken
+// =========================
 
-function parseDateDE(str) {
-  const m = DATE_RE.exec(str);
+// "25122024" -> "25.12.2024"
+const formatDDMMYYYY = (raw) => {
+  const d = String(raw || "").replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 4)}.${d.slice(4)}`;
+};
+
+// "930" -> "09:30", "0930" -> "09:30", "12345" -> "12:34" (Rest ignoriert)
+const formatHHMM = (raw) => {
+  const t = String(raw || "").replace(/\D/g, "").slice(0, 4);
+  if (t.length <= 2) return t; // "0", "09"
+  // ab 3 Ziffern: "123" -> "12:3" (nutzer tippt nächste 0 und wir werden "12:30")
+  return `${t.slice(0, 2)}:${t.slice(2)}`;
+};
+
+// "25.12.2024" -> Date (validiert), sonst null
+const parseDateDE = (str) => {
+  const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(str || "");
   if (!m) return null;
   const [, dd, mm, yyyy] = m;
   const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
@@ -17,33 +34,69 @@ function parseDateDE(str) {
   )
     return null;
   return d;
-}
+};
 
-const isValidTime = (str) => TIME_RE.test(str);
+// "25.12.2024" -> "2024-12-25" | "" (wenn leer/ungültig)
+const toISODateFromDE = (display) => {
+  const d = parseDateDE(display);
+  if (!d) return "";
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
 
+// "9:3" -> "09:03" | "930" -> "09:30" | "09:30" bleibt
+const normalizeTime = (str) => {
+  if (!str) return "";
+  // Erst Zahlen extrahieren und in HH:MM bringen
+  const fm = formatHHMM(str); // z.B. "0930" -> "09:30", "930" -> "09:30"
+  const m = /^([01]?\d|2[0-3]):([0-5]\d?)$/.exec(fm);
+  if (!m) return fm; // Nutzer ist noch am Tippen; zurückgeben, damit UI nicht nervt
+  const hh = m[1].padStart(2, "0");
+  const mm = m[2].padStart(2, "0");
+  return `${hh}:${mm}`;
+};
+
+// Validierung Regex (nach Maskierung)
+const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+// =========================
+// Komponente
+// =========================
 const AccidentForm = () => {
+  // WICHTIG: Für Datum/Uhrzeit speichern wir die UI-Variante (mit Punkt/Colon).
+  // Vor dem Absenden wird in ISO (YYYY-MM-DD) / "HH:MM" konvertiert.
   const [formData, setFormData] = useState({
     name_verletzte_person: "",
-    unfall_datum: "",
-    unfall_uhrzeit: "",
+    unfall_datum: "",           // "tt.mm.jjjj" (UI)
+    unfall_uhrzeit: "",         // "hh:mm" (UI)
     ort: "",
     hergang: "",
     art_der_verletzung: "",
     zeugen: "",
-    erstehilfe_datum: "",
-    erstehilfe_uhrzeit: "",
+    erstehilfe_datum: "",       // "tt.mm.jjjj" (UI)
+    erstehilfe_uhrzeit: "",     // "hh:mm" (UI)
     erstehilfe_massnahmen: "",
     ersthelfer_name: "",
   });
 
   const [errors, setErrors] = useState({});
-
-  // React Query Mutation statt isSubmitting/message
   const createAccidentMutation = useCreateAccident();
 
+  // Einheitlicher Change-Handler mit Maskierung für Datum/Zeit
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    let next = value;
+    if (name === "unfall_datum" || name === "erstehilfe_datum") {
+      next = formatDDMMYYYY(value);
+    }
+    if (name === "unfall_uhrzeit" || name === "erstehilfe_uhrzeit") {
+      next = formatHHMM(value);
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: next }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
@@ -69,6 +122,7 @@ const AccidentForm = () => {
       }
     });
 
+    // Datum prüfen
     const dUnfall = parseDateDE(formData.unfall_datum);
     if (formData.unfall_datum && !dUnfall) {
       newErrors.unfall_datum = "Bitte im Format tt.mm.jjjj eingeben";
@@ -78,17 +132,18 @@ const AccidentForm = () => {
       newErrors.erstehilfe_datum = "Bitte im Format tt.mm.jjjj eingeben";
     }
 
-    if (formData.unfall_uhrzeit && !isValidTime(formData.unfall_uhrzeit)) {
+    // Zeit prüfen (nach Maskierung sollte "hh:mm" vorhanden sein)
+    const tUnfall = normalizeTime(formData.unfall_uhrzeit);
+    if (formData.unfall_uhrzeit && !TIME_RE.test(tUnfall)) {
       newErrors.unfall_uhrzeit = "Bitte im Format hh:mm (00–23:59) eingeben";
     }
-    if (
-      formData.erstehilfe_uhrzeit &&
-      !isValidTime(formData.erstehilfe_uhrzeit)
-    ) {
+    const tEH = normalizeTime(formData.erstehilfe_uhrzeit);
+    if (formData.erstehilfe_uhrzeit && !TIME_RE.test(tEH)) {
       newErrors.erstehilfe_uhrzeit =
         "Bitte im Format hh:mm (00–23:59) eingeben";
     }
 
+    // Plausibilitäten
     if (dUnfall) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -120,14 +175,21 @@ const AccidentForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
+
+    // Vor dem Absenden UI-Strings in Backend-Formate umwandeln
+    const payload = {
+      ...formData,
+      unfall_datum: toISODateFromDE(formData.unfall_datum),           // "YYYY-MM-DD"
+      erstehilfe_datum: toISODateFromDE(formData.erstehilfe_datum),   // "YYYY-MM-DD"
+      unfall_uhrzeit: normalizeTime(formData.unfall_uhrzeit),         // "HH:MM"
+      erstehilfe_uhrzeit: normalizeTime(formData.erstehilfe_uhrzeit), // "HH:MM"
+    };
 
     try {
-      const result = await createAccidentMutation.mutateAsync(formData);
-      
-      if (result.success) {
+      const result = await createAccidentMutation.mutateAsync(payload);
+
+      if (result?.success) {
         setFormData({
           name_verletzte_person: "",
           unfall_datum: "",
@@ -144,45 +206,49 @@ const AccidentForm = () => {
         setErrors({});
       }
     } catch (error) {
-      console.error('Submit error:', error.message);
+      console.error("Submit error:", error?.message || error);
     }
   };
 
-  // Messages von React Query
-  const successMessage = createAccidentMutation.isSuccess && createAccidentMutation.data?.success ? 
-    `Unfall erfolgreich gemeldet! ID: ${createAccidentMutation.data.data.id}` : null;
-  
-  const errorMessage = createAccidentMutation.isError ? 
-    createAccidentMutation.error.message : null;
+  // React-Query Status
+  const successMessage =
+    createAccidentMutation.isSuccess && createAccidentMutation.data?.success
+      ? `Unfall erfolgreich gemeldet! ID: ${createAccidentMutation.data.data?.id ?? "—"}`
+      : null;
+
+  const errorMessage = createAccidentMutation.isError
+    ? createAccidentMutation.error?.message
+    : null;
 
   const isSubmitting = createAccidentMutation.isLoading;
+
+  // Optional: simple Restriktion, damit im Datum/Zeit nur Nummern/BKSP/DEL/.: getippt werden
+  const allowDigitsDot = (e) => {
+    const allowed =
+      /[0-9.]/.test(e.key) ||
+      ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"].includes(e.key);
+    if (!allowed) e.preventDefault();
+  };
+  const allowDigitsColon = (e) => {
+    const allowed =
+      /[0-9:]/.test(e.key) ||
+      ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"].includes(e.key);
+    if (!allowed) e.preventDefault();
+  };
 
   return (
     <div className="report-page">
       <div className="container">
         <div className="card">
           <div className="card__header">
-            <p className="card__description">
-              Unfallmeldung für das Gesundheitsamt Frankfurt am Main
-            </p>
+            <p className="card__description">Eintrag hinzufügen</p>
           </div>
 
-          {successMessage && (
-            <div className="alert alert--success">
-              {successMessage}
-            </div>
-          )}
-
-          {errorMessage && (
-            <div className="alert alert--error">
-              {errorMessage}
-            </div>
-          )}
+          {successMessage && <div className="alert alert--success">{successMessage}</div>}
+          {errorMessage && <div className="alert alert--error">{errorMessage}</div>}
 
           {Object.keys(errors).length > 0 && (
-            <div className="alert alert--error">
-              Bitte alle Felder korrekt ausfüllen
-            </div>
+            <div className="alert alert--error">Bitte alle Felder korrekt ausfüllen</div>
           )}
 
           <form onSubmit={handleSubmit}>
@@ -209,9 +275,7 @@ const AccidentForm = () => {
                     disabled={isSubmitting}
                   />
                   {errors.name_verletzte_person && (
-                    <div className="form-error">
-                      {errors.name_verletzte_person}
-                    </div>
+                    <div className="form-error">{errors.name_verletzte_person}</div>
                   )}
                 </div>
               </div>
@@ -221,10 +285,7 @@ const AccidentForm = () => {
               <h2>Unfall-Details</h2>
               <div className="form-grid">
                 <div className="form-group">
-                  <label
-                    htmlFor="unfall_datum"
-                    className="form-label form-label--required"
-                  >
+                  <label htmlFor="unfall_datum" className="form-label form-label--required">
                     Datum des Unfalls
                   </label>
                   <input
@@ -235,9 +296,8 @@ const AccidentForm = () => {
                     name="unfall_datum"
                     value={formData.unfall_datum}
                     onChange={handleChange}
-                    className={`form-input ${
-                      errors.unfall_datum ? "form-input--error" : ""
-                    }`}
+                    onKeyDown={allowDigitsDot}
+                    className={`form-input ${errors.unfall_datum ? "form-input--error" : ""}`}
                     disabled={isSubmitting}
                   />
                   {errors.unfall_datum && (
@@ -246,10 +306,7 @@ const AccidentForm = () => {
                 </div>
 
                 <div className="form-group">
-                  <label
-                    htmlFor="unfall_uhrzeit"
-                    className="form-label form-label--required"
-                  >
+                  <label htmlFor="unfall_uhrzeit" className="form-label form-label--required">
                     Uhrzeit des Unfalls
                   </label>
                   <input
@@ -260,6 +317,7 @@ const AccidentForm = () => {
                     name="unfall_uhrzeit"
                     value={formData.unfall_uhrzeit}
                     onChange={handleChange}
+                    onKeyDown={allowDigitsColon}
                     className={`form-input ${
                       errors.unfall_uhrzeit ? "form-input--error" : ""
                     }`}
@@ -271,10 +329,7 @@ const AccidentForm = () => {
                 </div>
 
                 <div className="form-group col-span-2">
-                  <label
-                    htmlFor="ort"
-                    className="form-label form-label--required"
-                  >
+                  <label htmlFor="ort" className="form-label form-label--required">
                     Ort des Unfalls
                   </label>
                   <input
@@ -283,9 +338,7 @@ const AccidentForm = () => {
                     name="ort"
                     value={formData.ort}
                     onChange={handleChange}
-                    className={`form-input ${
-                      errors.ort ? "form-input--error" : ""
-                    }`}
+                    className={`form-input ${errors.ort ? "form-input--error" : ""}`}
                     placeholder="z.B. Büro 204, Gebäude A"
                     disabled={isSubmitting}
                   />
@@ -293,10 +346,7 @@ const AccidentForm = () => {
                 </div>
 
                 <div className="form-group col-span-2">
-                  <label
-                    htmlFor="hergang"
-                    className="form-label form-label--required"
-                  >
+                  <label htmlFor="hergang" className="form-label form-label--required">
                     Hergang des Unfalls
                   </label>
                   <textarea
@@ -304,16 +354,12 @@ const AccidentForm = () => {
                     name="hergang"
                     value={formData.hergang}
                     onChange={handleChange}
-                    className={`form-textarea ${
-                      errors.hergang ? "form-input--error" : ""
-                    }`}
+                    className={`form-textarea ${errors.hergang ? "form-input--error" : ""}`}
                     placeholder="Beschreiben Sie, wie der Unfall passiert ist..."
                     rows="4"
                     disabled={isSubmitting}
                   />
-                  {errors.hergang && (
-                    <div className="form-error">{errors.hergang}</div>
-                  )}
+                  {errors.hergang && <div className="form-error">{errors.hergang}</div>}
                 </div>
 
                 <div className="form-group col-span-2">
@@ -336,17 +382,12 @@ const AccidentForm = () => {
                     disabled={isSubmitting}
                   />
                   {errors.art_der_verletzung && (
-                    <div className="form-error">
-                      {errors.art_der_verletzung}
-                    </div>
+                    <div className="form-error">{errors.art_der_verletzung}</div>
                   )}
                 </div>
 
                 <div className="form-group col-span-2">
-                  <label
-                    htmlFor="zeugen"
-                    className="form-label form-label--required"
-                  >
+                  <label htmlFor="zeugen" className="form-label form-label--required">
                     Name der Zeugen
                   </label>
                   <input
@@ -355,15 +396,11 @@ const AccidentForm = () => {
                     name="zeugen"
                     value={formData.zeugen}
                     onChange={handleChange}
-                    className={`form-input ${
-                      errors.zeugen ? "form-input--error" : ""
-                    }`}
+                    className={`form-input ${errors.zeugen ? "form-input--error" : ""}`}
                     placeholder='Namen der Zeugen oder "keine Zeugen"'
                     disabled={isSubmitting}
                   />
-                  {errors.zeugen && (
-                    <div className="form-error">{errors.zeugen}</div>
-                  )}
+                  {errors.zeugen && <div className="form-error">{errors.zeugen}</div>}
                 </div>
               </div>
             </div>
@@ -372,10 +409,7 @@ const AccidentForm = () => {
               <h2>Erste-Hilfe-Leistungen</h2>
               <div className="form-grid">
                 <div className="form-group">
-                  <label
-                    htmlFor="erstehilfe_datum"
-                    className="form-label form-label--required"
-                  >
+                  <label htmlFor="erstehilfe_datum" className="form-label form-label--required">
                     Datum der Erste-Hilfe-Leistung
                   </label>
                   <input
@@ -386,6 +420,7 @@ const AccidentForm = () => {
                     name="erstehilfe_datum"
                     value={formData.erstehilfe_datum}
                     onChange={handleChange}
+                    onKeyDown={allowDigitsDot}
                     className={`form-input ${
                       errors.erstehilfe_datum ? "form-input--error" : ""
                     }`}
@@ -411,15 +446,14 @@ const AccidentForm = () => {
                     name="erstehilfe_uhrzeit"
                     value={formData.erstehilfe_uhrzeit}
                     onChange={handleChange}
+                    onKeyDown={allowDigitsColon}
                     className={`form-input ${
                       errors.erstehilfe_uhrzeit ? "form-input--error" : ""
                     }`}
                     disabled={isSubmitting}
                   />
                   {errors.erstehilfe_uhrzeit && (
-                    <div className="form-error">
-                      {errors.erstehilfe_uhrzeit}
-                    </div>
+                    <div className="form-error">{errors.erstehilfe_uhrzeit}</div>
                   )}
                 </div>
 
@@ -443,17 +477,12 @@ const AccidentForm = () => {
                     disabled={isSubmitting}
                   />
                   {errors.erstehilfe_massnahmen && (
-                    <div className="form-error">
-                      {errors.erstehilfe_massnahmen}
-                    </div>
+                    <div className="form-error">{errors.erstehilfe_massnahmen}</div>
                   )}
                 </div>
 
                 <div className="form-group col-span-2">
-                  <label
-                    htmlFor="ersthelfer_name"
-                    className="form-label form-label--required"
-                  >
+                  <label htmlFor="ersthelfer_name" className="form-label form-label--required">
                     Name des Ersthelfers
                   </label>
                   <input
